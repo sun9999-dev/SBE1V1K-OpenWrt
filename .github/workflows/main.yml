@@ -9,13 +9,13 @@ on:
         required: true
         default: qualcommbe
       subtarget:
-        description: qualcommbe_ipq95xx
+        description: ipq95xx
         required: true
         default: qualcommbe_ipq95xx
       profile:
         description: qualcommbe_ipq95xx_DEVICE_askey_sbe1v1k
         required: true
-        default: qualcommbe_ipq95xx_DEVICE_askey_sbe1v1k
+        default: askey_sbe1v1k
   # push:
   #   branches: [ main ]
 
