@@ -46,7 +46,7 @@ jobs:
         working-directory: ./openwrt
         run: |
           make defconfig
-          echo "CONFIG_TARGET_${{ github.event.inputs.target }}=${{ github.event.inputs.subtarget }}=y" >> .config
+          echo "CONFIG_TARGET_${{ github.event.inputs.target }}_${{ github.event.inputs.subtarget }}=y" >> .config
           echo "CONFIG_TARGET_${{ github.event.inputs.target }}_${{ github.event.inputs.subtarget }}_PROFILE_${{ github.event.inputs.profile }}=y" >> .config
           make defconfig
 
