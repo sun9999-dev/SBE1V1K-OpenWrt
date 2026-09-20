@@ -45,12 +45,31 @@ jobs:
       - name: Generate .config
         working-directory: ./openwrt
         run: |
-          make defconfig
           echo "CONFIG_TARGET_${{ github.event.inputs.target }}=y" >> .config
           echo "CONFIG_TARGET_${{ github.event.inputs.target }}_${{ github.event.inputs.subtarget }}=y" >> .config
           echo "CONFIG_TARGET_${{ github.event.inputs.target }}_${{ github.event.inputs.subtarget }}_DEVICE_${{ github.event.inputs.profile }}=y" >> .config
           make defconfig
 
+      - name: Upload .config as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-config
+          path: .config
+
+build-fw:
+    needs: pre-config
+    environment: check-config # 这里触发人工审批暂停！
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout OpenWrt fork
+        uses: actions/checkout@v4
+
+      - name: Download .config artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: openwrt-config
+          path: .
+          
       - name: Download source files
         working-directory: ./openwrt
         run: make download -j$(nproc)
