@@ -47,10 +47,16 @@ jobs:
           echo "CONFIG_TARGET_${{ github.event.inputs.target }}_${{ github.event.inputs.subtarget }}=y" >> .config
           echo "CONFIG_TARGET_${{ github.event.inputs.target }}_${{ github.event.inputs.subtarget }}_DEVICE_${{ github.event.inputs.profile }}=y" >> .config
           make defconfig
- 
+          sed -i '/CONFIG_PACKAGE_nftables-nojson/d' .config
+          sed -i '/CONFIG_PACKAGE_sdl3/d' .config
+          echo "==== Generated .config Target lines ===="
+          grep -E "^CONFIG_TARGET|^CONFIG_PACKAGE_nftables|^CONFIG_PACKAGE_sdl3" .config
+          pwd
+          ls -la .config
+          ls -la ../
+
       - name: Upload .config as artifact
         uses: actions/upload-artifact@v4
-        working-directory: ./openwrt
         with:
           name: openwrt-config
           path: openwrt/.config
@@ -68,7 +74,6 @@ jobs:
 
       - name: Download .config artifact
         uses: actions/download-artifact@v4
-        working-directory: ./openwrt
         with:
           name: openwrt-config
           path: openwrt/
