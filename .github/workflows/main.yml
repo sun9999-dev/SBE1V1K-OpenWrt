@@ -1,26 +1,23 @@
 name: Build Forked OpenWrt Snapshot
 run-name: Build OpenWrt ${{ github.event.inputs.subtarget }}-${{ github.event.inputs.profile }}
-
 on:
   workflow_dispatch:
     inputs:
       target:
-        description: qualcommbe
+        description: Target
         required: true
         default: qualcommbe
       subtarget:
-        description: ipq95xx
+        description: Subtarget
         required: true
-        default: qualcommbe_ipq95xx
+        default: ipq95xx
       profile:
-        description: qualcommbe_ipq95xx_DEVICE_askey_sbe1v1k
+        description: Device Profile
         required: true
         default: askey_sbe1v1k
-  # push:
-  #   branches: [ main ]
 
 jobs:
-  build:
+  pre-config:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout FORKED OpenWrt source
@@ -45,31 +42,35 @@ jobs:
       - name: Generate .config
         working-directory: ./openwrt
         run: |
+          rm -f .config
           echo "CONFIG_TARGET_${{ github.event.inputs.target }}=y" >> .config
           echo "CONFIG_TARGET_${{ github.event.inputs.target }}_${{ github.event.inputs.subtarget }}=y" >> .config
           echo "CONFIG_TARGET_${{ github.event.inputs.target }}_${{ github.event.inputs.subtarget }}_DEVICE_${{ github.event.inputs.profile }}=y" >> .config
           make defconfig
-
+ 
       - name: Upload .config as artifact
         uses: actions/upload-artifact@v4
         with:
           name: openwrt-config
-          path: .config
+          path: openwrt/.config
 
-build-fw:
+  build-fw:
     needs: pre-config
-    environment: check-config # 这里触发人工审批暂停！
+    environment: check-config
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout OpenWrt fork
         uses: actions/checkout@v4
+        with:
+          path: openwrt
+          fetch-depth: 0
 
       - name: Download .config artifact
         uses: actions/download-artifact@v4
         with:
           name: openwrt-config
-          path: .
-          
+          path: openwrt/
+
       - name: Download source files
         working-directory: ./openwrt
         run: make download -j$(nproc)
