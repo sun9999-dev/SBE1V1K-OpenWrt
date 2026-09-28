@@ -42,15 +42,16 @@ jobs:
           rm -rf feeds/video
           rm -rf feeds/packages/net/nftables-nojson
           ./scripts/feeds install -a
-          # 加载平台配置，锁定目标设备
+          # 复制平台基础配置
           > .config
           cat configs/sbe1v1k.config > .config
+          # 一次性生成config
           make defconfig
-          # 核心一行：把所有注释禁用的kmod解开注释，改为=m，已有配置完全保留
+          # sed：所有注释关闭的kmod，取消注释并改为=m；已有配置完全不动
           sed -i '/^# CONFIG_PACKAGE_kmod-.*is not set$/ s/^# //; s/is not set/=m/' .config
-          # 再跑一次defconfig，自动处理模块依赖
-          make defconfig
-          # 统计输出
+          # 统计
+          echo "=== 筛选所有=m的kmod配置行 ==="
+          grep 'CONFIG_PACKAGE_kmod-' .config | grep '=m'
           echo "=== 最终启用的kmod包数量 ==="
           grep 'CONFIG_PACKAGE_kmod-' .config | grep '=m' | wc -l
 
@@ -60,7 +61,7 @@ jobs:
           set -e
           cd openwrt
           rm -rf bin
-          make -j2 IGNORE_ERRORS="n m"
+          make -j$(nproc) IGNORE_ERRORS="n m"
         continue-on-error: true
         
       - name: Tmate on build failure
