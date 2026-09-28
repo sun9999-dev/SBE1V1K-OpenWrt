@@ -51,9 +51,9 @@ jobs:
         continue-on-error: true
         run: |
           cd openwrt
-          rm -rf bin
+          rm -rf bin 
           yes "" | make -j1 V=sc prepare
-       make -j$(nproc) IGNORE_ERRORS="n m"
+          make -j$(nproc) IGNORE_ERRORS="n m"
           
       - name: Tmate on build failure
         if: failure()
