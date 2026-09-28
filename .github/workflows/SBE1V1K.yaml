@@ -54,25 +54,21 @@ jobs:
           grep 'CONFIG_PACKAGE_kmod-' .config | grep '=m'
           echo "=== 最终启用的kmod包数量 ==="
           grep 'CONFIG_PACKAGE_kmod-' .config | grep '=m' | wc -l
+          yes "" | make prepare
 
-      - name: Compile firmware & kmod packages
+      - name: Compile firmware
         id: build_step
+        continue-on-error: true
         run: |
-          set -e
           cd openwrt
           rm -rf bin
-          make -j$(nproc) IGNORE_ERRORS="n m" KERNEL_MAKEOPTS="yes"
-        continue-on-error: true
+          make -j$(nproc) IGNORE_ERRORS="n m"
+   
         
       - name: Tmate on build failure
-        if: steps.build_step.outcome == 'failure'
-        uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: true
-          sudo: auto
-          install-dependencies: true
-          # 延长超时时间到30分钟=1800秒
-          connect-timeout-seconds: 1800
+        if: failure()
+        uses: mxschmitt/action-tmate@v3        
+
       # 通配符自动匹配目录
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
