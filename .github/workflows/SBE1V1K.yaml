@@ -61,7 +61,7 @@ jobs:
           set -e
           cd openwrt
           rm -rf bin
-          make -j$(nproc) IGNORE_ERRORS="n m"
+          make -j$(nproc) IGNORE_ERRORS="n m" KERNEL_MAKEOPTS="yes"
         continue-on-error: true
         
       - name: Tmate on build failure
