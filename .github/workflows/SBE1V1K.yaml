@@ -1,8 +1,16 @@
 name: Build SBE1V1K IPQ95xx OpenWrt
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 编译类型
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - initramfs-only
+          - config-only
 env:
   REPO_URL: https://github.com/sun9999-dev/SBE1V1K-OpenWrt.git
   REPO_BRANCH: main
@@ -15,6 +23,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+      - name: Show build option
+        run: |
+          echo "Build type: ${{ github.event.inputs.build_type }}"
+          
       - name: Init Env & Install Dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -52,9 +64,17 @@ jobs:
         continue-on-error: true
         run: |
           cd openwrt
-          rm -rf bin 
-          yes "" | make -j1 V=sc prepare
-          make -j$(nproc) IGNORE_ERRORS="n m"
+          rm -rf bin
+
+          if [[ "${{ github.event.inputs.build_type }}" == "config-only" ]]; then
+            echo "仅生成配置，跳过编译"
+            exit 0
+          fi
+          if [[ "${{ github.event.inputs.build_type }}" == "initramfs-only" ]]; then
+             make -j$(nproc) image PROFILE=${{ env.TARGET_PROFILE }} FILES= bin/initramfs
+          else
+             make -j$(nproc) IGNORE_ERRORS="n m"
+          fi
           
       - name: Tmate on build failure
         if: failure()
