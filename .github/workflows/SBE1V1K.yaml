@@ -3,14 +3,13 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
 env:
   REPO_URL: https://github.com/sun9999-dev/SBE1V1K-OpenWrt.git
   REPO_BRANCH: main
-
 jobs:
   build:
     runs-on: ubuntu-24.04
+    timeout-minutes: 360 # GitHub最大6小时超时
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,22 +43,48 @@ jobs:
           ./scripts/feeds update -a
           rm -rf feeds/video
           ./scripts/feeds install -a
-          # ========== 重点：使用configs下的sbe1v1k.config，OpenWrt原生加载方式 ==========
+          # 加载SBE1V1K默认配置
           cp configs/sbe1v1k.config .config
           make defconfig
-          # 【可选】开启编译全部内核模块为独立kmod包
+          # 开启【全部内核驱动编译成模块】+【模块打包成kmod ipk】
+          echo "CONFIG_ALL_MODULES=y" >> .config
           echo "CONFIG_ALL_KMODS=y" >> .config
           make defconfig
+          # 打印当前内核模块数量，提前校验
+          grep -E "CONFIG_[A-Z0-9_]+=m" .config | wc -l
 
       - name: Compile firmware & kmod packages
+        id: build_step
         run: |
+          set -e
           cd openwrt
           rm -rf bin
           make -j$(nproc)
+          # 编译完成输出目录大小 & ipk总数
+          du -sh bin/aarch64_cortex-a53/*
+          echo "==== Total ipk packages count ===="
+          ls bin/aarch64_cortex-a53/packages | wc -l
+        continue-on-error: true # 编译出错不直接退出，进入tmate
 
-      - name: Upload compiled bin (firmware + all ipk/kmod packages)
+      # 编译失败自动进入Tmate交互式ssh调试
+      - name: Tmate on build failure
+        if: steps.build_step.outcome == 'failure'
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+
+      # 分开上传制品：固件镜像
+      - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
-          name: openwrt-sbe1v1k-bin
-          path: openwrt/bin
+          name: openwrt-sbe1v1k-firmware
+          path: openwrt/bin/aarch64_cortex-a53/targets
+          retention-days: 7
+
+      # 分开上传制品：全套ipk（包含所有kmod）
+      - name: Upload packages artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-sbe1v1k-packages
+          path: openwrt/bin/aarch64_cortex-a53/packages
           retention-days: 7
