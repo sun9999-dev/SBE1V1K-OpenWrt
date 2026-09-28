@@ -34,26 +34,34 @@ jobs:
           key: ${{ runner.os }}-openwrt-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-openwrt-
+      
       - name: Update feeds & apply target config
         run: |
           cd openwrt
           ./scripts/feeds update -a
           rm -rf feeds/video
           ./scripts/feeds install -a
-          cp configs/sbe1v1k.config .config
+          # 生成基础默认config
           make defconfig
-          echo "CONFIG_ALL_MODULES=y" >> .config
+          # 开启全内核模块打包
           echo "CONFIG_ALL_KMODS=y" >> .config
+          echo "CONFIG_ALL_NONSHARED=y" >> .config
+          echo "CONFIG_DEVEL=y" >> .config
+          # 追加SBE1V1K硬件配置
+          cat configs/sbe1v1k.config >> .config
+          # 合并配置
           make defconfig
-          grep -E "CONFIG_[A-Z0-9_]+=m" .config | wc -l
+          echo "=== 最终启用的kmod包数量 ==="
+          grep "CONFIG_PACKAGE_kmod-" .config | grep "=m" | wc -l
       - name: Compile firmware & kmod packages
         id: build_step
         run: |
           set -e
           cd openwrt
           rm -rf bin
-          make -j2
+          make -j2 IGNORE_ERRORS="n m"
         continue-on-error: true
+        
       - name: Tmate on build failure
         if: steps.build_step.outcome == 'failure'
         uses: mxschmitt/action-tmate@v3
