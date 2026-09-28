@@ -1,88 +1,70 @@
 name: Build SBE1V1K IPQ95xx OpenWrt
+#
+# P3TERX/Actions-OpenWrt 原版模板，适配你的仓库
+#
+
 on:
   push:
     branches: [ clean-main ]
-  workflow_dispatch: # 支持网页手动触发
+  workflow_dispatch:
 
 env:
-  TARGET_PROFILE: qualcommbe_ipq95xx
-  TARGET_ARCH: aarch64_cortex-a53
-  BUILD_ROOT: ${{ github.workspace }}
-  CCACHE_DIR: ${{ github.workspace }}/ccache
+  REPO_URL: https://github.com/sun9999-dev/SBE1V1K-OpenWrt.git
+  REPO_BRANCH: clean-main
+  FEED_CONF: feeds.conf.default
+  CONFIG_FILE: .config
+  DIY_SH: diy.sh
 
 jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout repo sun9999-dev/SBE1V1K-OpenWrt
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          submodules: true
 
-      - name: Install build dependencies (Ubuntu24.04 适配)
+      - name: Initialization environment
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
           sudo apt update
-          sudo apt install -y build-essential clang flex bison g++ gawk \
-          gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
-          python3 python3-setuptools python3-pip rsync swig unzip zlib1g-dev file wget libelf-dev ccache
+          sudo apt install -y build-essential clang flex bison g++ gawk gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev python3 python3-setuptools python3-pip rsync swig unzip zlib1g-dev file wget libelf-dev ccache
+          git clone $REPO_URL openwrt --single-branch --branch $REPO_BRANCH
+          cd openwrt
+          git checkout $REPO_BRANCH
 
-      - name: Restore cache (dl + build_dir + staging_dir + ccache)
+      - name: Cache
         uses: actions/cache@v4
         with:
           path: |
-            ${{ env.BUILD_ROOT }}/dl
-            ${{ env.BUILD_ROOT }}/build_dir
-            ${{ env.BUILD_ROOT }}/staging_dir
-            ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-sbe1v1k-openwrt-${{ github.sha }}
+            openwrt/dl
+            openwrt/build_dir
+            openwrt/staging_dir
+            openwrt/ccache
+          key: ${{ runner.os }}-openwrt-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-sbe1v1k-openwrt-
+            ${{ runner.os }}-openwrt-
 
-      - name: Prepare build env & ccache
+      - name: Update feeds
         run: |
-          export CCACHE_DIR=${{ env.CCACHE_DIR }}
-          export PATH="/usr/bin:$PATH"
-          ccache -M 5G
-          ccache -s
-
-      - name: Update feeds & defconfig
-        run: |
-          # 清华镜像加速feeds源码拉取
-          sed -i 's#https://git.openwrt.org#https://mirrors.tuna.tsinghua.edu.cn/git/openwrt#g' feeds.conf.default
+          cd openwrt
           ./scripts/feeds update -a
+          # 【关键】video feed 会导致xkeyboard-config报错，直接删除
+          rm -rf feeds/video
           ./scripts/feeds install -a
-          cp .config .config.old
+          cp ../${CONFIG_FILE} .config
           make defconfig
 
-      - name: Incremental compile (rm bin 模拟你手动删除bin重建)
+      - name: Compile firmware
         run: |
+          cd openwrt
           rm -rf bin
-          # 首次全新编译取消下面注释，注释 package/compile
-          # make -j$(nproc)
-          make package/compile -j$(nproc)
-          make target/image -j$(nproc)
-          make package/index
+          make -j$(nproc)
 
-      - name: Print final vermagic (校验内核hash)
-        run: |
-          cat build_dir/target-${{ env.TARGET_ARCH }}/linux-${{ env.TARGET_PROFILE }}/linux-6.18.39/.vermagic
-
-      - name: Package firmware & packages
-        run: |
-          tar -zcvf firmware.tar.gz bin/target/${{ env.TARGET_PROFILE }}
-          tar -zcvf packages.tar.gz bin/packages/${{ env.TARGET_ARCH }}
-
-      - name: Upload firmware artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: openwrt-sbe1v1k-firmware
-          path: ${{ env.BUILD_ROOT }}/firmware.tar.gz
-          retention-days: 7
-
-      - name: Upload packages repo artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: openwrt-sbe1v1k-packages
-          path: ${{ env.BUILD_ROOT }}/packages.tar.gz
+          path: openwrt/bin
           retention-days: 7
