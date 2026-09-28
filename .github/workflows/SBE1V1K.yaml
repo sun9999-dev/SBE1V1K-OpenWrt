@@ -7,9 +7,6 @@ on:
 env:
   REPO_URL: https://github.com/sun9999-dev/SBE1V1K-OpenWrt.git
   REPO_BRANCH: main
-  FEED_CONF: feeds.conf.default
-  CONFIG_FILE: .config
-  DIY_SH: diy.sh
 
 jobs:
   build:
@@ -20,7 +17,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Initialization environment
+      - name: Init Env & Install Dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
@@ -29,7 +26,7 @@ jobs:
           git clone $REPO_URL openwrt --single-branch --branch $REPO_BRANCH
           cd openwrt
 
-      - name: Cache
+      - name: Cache build artifacts
         uses: actions/cache@v4
         with:
           path: |
@@ -41,24 +38,28 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-openwrt-
 
-      - name: Update feeds
+      - name: Update feeds & apply target config
         run: |
           cd openwrt
           ./scripts/feeds update -a
           rm -rf feeds/video
           ./scripts/feeds install -a
-          cp ../${CONFIG_FILE} .config
+          # ========== 重点：使用configs下的sbe1v1k.config，OpenWrt原生加载方式 ==========
+          cp configs/sbe1v1k.config .config
+          make defconfig
+          # 【可选】开启编译全部内核模块为独立kmod包
+          echo "CONFIG_ALL_KMODS=y" >> .config
           make defconfig
 
-      - name: Compile firmware
+      - name: Compile firmware & kmod packages
         run: |
           cd openwrt
           rm -rf bin
           make -j$(nproc)
 
-      - name: Upload artifact
+      - name: Upload compiled bin (firmware + all ipk/kmod packages)
         uses: actions/upload-artifact@v4
         with:
-          name: openwrt-sbe1v1k-firmware
+          name: openwrt-sbe1v1k-bin
           path: openwrt/bin
           retention-days: 7
