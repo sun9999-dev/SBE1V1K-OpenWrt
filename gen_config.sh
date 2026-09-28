@@ -6,14 +6,29 @@ cd openwrt
 > .config
 cat ../configs/sbe1v1k.config > .config
 make defconfig
+
 cat >> .config <<EOF
+# ========== 【底层硬件驱动：必须=y，编译进内核，固件内置】 ==========
+CONFIG_PACKAGE_kmod-ath12k=y
+CONFIG_PACKAGE_kmod-pcs-qcom-ipq9574=y
+CONFIG_PACKAGE_kmod-qcom-ppe=y
+CONFIG_PACKAGE_kmod-phylink=y
+CONFIG_PACKAGE_kmod-phy-realtek=y
+CONFIG_PACKAGE_kmod-mhi-bus=y
+CONFIG_PACKAGE_kmod-mac80211=y
+CONFIG_PACKAGE_kmod-cfg80211=y
+CONFIG_PACKAGE_kmod-br-netfilter=y
+CONFIG_PACKAGE_kmod-ipt-core=y
+CONFIG_PACKAGE_kmod-nft-core=y
+CONFIG_PACKAGE_kmod-nft-offload=y
+
+# ========== 【应用类包】 ==========
 CONFIG_PACKAGE_strongswan-full=m
 CONFIG_PACKAGE_luci-nginx=y
 CONFIG_PACKAGE_nginx-ssl=y
+
+# ========== 【附加模块：可选功能，=m，刷机后apk安装】 ==========
 CONFIG_PACKAGE_kmod-ath=m
-CONFIG_PACKAGE_kmod-ath12k=m
-CONFIG_PACKAGE_kmod-br-netfilter=m
-CONFIG_PACKAGE_kmod-cfg80211=m
 CONFIG_PACKAGE_kmod-crypto-acompress=m
 CONFIG_PACKAGE_kmod-crypto-aead=m
 CONFIG_PACKAGE_kmod-crypto-authenc=m
@@ -56,7 +71,6 @@ CONFIG_PACKAGE_kmod-ipsec4=m
 CONFIG_PACKAGE_kmod-ipsec6=m
 CONFIG_PACKAGE_kmod-ipt-conntrack=m
 CONFIG_PACKAGE_kmod-ipt-conntrack-extra=m
-CONFIG_PACKAGE_kmod-ipt-core=m
 CONFIG_PACKAGE_kmod-ipt-extra=m
 CONFIG_PACKAGE_kmod-ipt-ipsec=m
 CONFIG_PACKAGE_kmod-ipt-nat=m
@@ -77,9 +91,7 @@ CONFIG_PACKAGE_kmod-lib-zlib-deflate=m
 CONFIG_PACKAGE_kmod-lib-zlib-inflate=m
 CONFIG_PACKAGE_kmod-lib-zstd=m
 CONFIG_PACKAGE_kmod-libphy=m
-CONFIG_PACKAGE_kmod-mac80211=m
 CONFIG_PACKAGE_kmod-macvlan=m
-CONFIG_PACKAGE_kmod-mhi-bus=m
 CONFIG_PACKAGE_kmod-netlink-diag=m
 CONFIG_PACKAGE_kmod-nf-conncount=m
 CONFIG_PACKAGE_kmod-nf-conntrack=m
@@ -95,19 +107,13 @@ CONFIG_PACKAGE_kmod-nf-reject=m
 CONFIG_PACKAGE_kmod-nf-reject6=m
 CONFIG_PACKAGE_kmod-nfnetlink=m
 CONFIG_PACKAGE_kmod-nft-compat=m
-CONFIG_PACKAGE_kmod-nft-core=m
 CONFIG_PACKAGE_kmod-nft-fib=m
 CONFIG_PACKAGE_kmod-nft-nat=m
-CONFIG_PACKAGE_kmod-nft-offload=m
 CONFIG_PACKAGE_kmod-nft-xfrm=m
 CONFIG_PACKAGE_kmod-nls-base=m
-CONFIG_PACKAGE_kmod-pcs-qcom-ipq9574=m
-CONFIG_PACKAGE_kmod-phy-realtek=m
-CONFIG_PACKAGE_kmod-phylink=m
 CONFIG_PACKAGE_kmod-ppp=m
 CONFIG_PACKAGE_kmod-pppoe=m
 CONFIG_PACKAGE_kmod-pppox=m
-CONFIG_PACKAGE_kmod-qcom-ppe=m
 CONFIG_PACKAGE_kmod-qcom-qmi-helpers=m
 CONFIG_PACKAGE_kmod-qrtr=m
 CONFIG_PACKAGE_kmod-qrtr-mhi=m
@@ -132,6 +138,7 @@ CONFIG_PACKAGE_kmod-xfrm-user=m
 CONFIG_PACKAGE_kmod-zram=m
 CONFIG_PACKAGE_kmod-wireguard=m
 EOF
-make defconfig
+
+# 删掉末尾多余的 make defconfig !!!
 echo "Total enabled kmod packages:"
-grep 'CONFIG_PACKAGE' .config | grep '=m' | wc -l
+grep 'CONFIG_PACKAGE' .config | grep -E '=m|=y' | wc -l
