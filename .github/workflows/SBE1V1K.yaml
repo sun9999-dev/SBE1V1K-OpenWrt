@@ -35,25 +35,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-openwrt-
       
-      - name: Update feeds & apply target config
+      - name: Update feeds & build .config
         run: |
           cd openwrt
           ./scripts/feeds update -a
           rm -rf feeds/video
+          rm -rf feeds/packages/net/nftables-nojson
           ./scripts/feeds install -a
-          # 新建空.config，写入平台配置
+          # 加载平台配置，锁定目标设备
           > .config
           cat configs/sbe1v1k.config > .config
-          # 第一次defconfig：锁定SBE1V1K目标平台
           make defconfig
-          # 平台锁定后，开启全内核模块打包
-          echo "CONFIG_ALL_KMODS=y" >> .config
-          echo "CONFIG_ALL_NONSHARED=y" >> .config
-          echo "CONFIG_DEVEL=y" >> .config
-          # 再次defconfig，平台不变，启用全部kmod
+          # 核心一行：把所有注释禁用的kmod解开注释，改为=m，已有配置完全保留
+          sed -i '/^# CONFIG_PACKAGE_kmod-.*is not set$/ s/^# //; s/is not set/=m/' .config
+          # 再跑一次defconfig，自动处理模块依赖
           make defconfig
+          # 统计输出
           echo "=== 最终启用的kmod包数量 ==="
-          grep -c '^CONFIG_PACKAGE_kmod-.*=m' .config
+          grep 'CONFIG_PACKAGE_kmod-' .config | grep '=m' | wc -l
 
       - name: Compile firmware & kmod packages
         id: build_step
