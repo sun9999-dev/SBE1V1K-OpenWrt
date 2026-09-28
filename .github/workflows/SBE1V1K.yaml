@@ -39,6 +39,7 @@ jobs:
         run: |
           cd openwrt
           ./scripts/feeds update -a
+          rm -rf feeds/packages/net/nftables-nojson
           ./scripts/feeds install -a
       - name: Generate .config
         run: |
