@@ -39,22 +39,11 @@ jobs:
         run: |
           cd openwrt
           ./scripts/feeds update -a
-          rm -rf feeds/video
-          rm -rf feeds/packages/net/nftables-nojson
           ./scripts/feeds install -a
-          # 复制平台基础配置
-          > .config
-          cat configs/sbe1v1k.config > .config
-          # 一次性生成config
-          make defconfig
-          # sed：所有注释关闭的kmod，取消注释并改为=m；已有配置完全不动
-          sed -i '/^# CONFIG_PACKAGE_kmod-.*is not set$/ s/^# //; s/is not set/=m/' .config
-          # 统计
-          echo "=== 筛选所有=m的kmod配置行 ==="
-          grep 'CONFIG_PACKAGE_kmod-' .config | grep '=m'
-          echo "=== 最终启用的kmod包数量 ==="
-          grep 'CONFIG_PACKAGE_kmod-' .config | grep '=m' | wc -l
-          yes "" | make prepare
+      - name: Generate .config
+        run: |
+          chmod +x ./gen_config.sh
+          ./gen_config.sh
 
       - name: Compile firmware
         id: build_step
@@ -62,9 +51,9 @@ jobs:
         run: |
           cd openwrt
           rm -rf bin
-          make -j$(nproc) IGNORE_ERRORS="n m"
-   
-        
+          yes "" | make -j1 V=sc prepare
+       make -j$(nproc) IGNORE_ERRORS="n m"
+          
       - name: Tmate on build failure
         if: failure()
         uses: mxschmitt/action-tmate@v3        
