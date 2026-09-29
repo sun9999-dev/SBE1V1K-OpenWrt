@@ -59,8 +59,13 @@ jobs:
           sed -i '/PACKAGE_nftables-nojson/d' tmp/.config-package.in
       - name: Generate .config
         run: |
-          chmod +x ./gen_config.sh
-          ./gen_config.sh
+            cp sbe1v1k.config .config
+            # CI环境必须用defconfig，不要olddefconfig！
+            make defconfig
+            echo "===== Check critical drivers ====="
+            grep -E "kmod-pcs-qcom-ipq9574|kmod-qcom-ppe|kmod-ath12k|kmod-phylink" .config
+            echo "Total enabled kmod packages:"
+            grep 'CONFIG_PACKAGE' .config | grep -E '=m|=y' | wc -l
       - name: Compile firmware
         id: build_step
         # 调试阶段关闭continue-on-error，出错直接终止，不要生成残缺包
