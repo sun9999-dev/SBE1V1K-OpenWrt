@@ -14,6 +14,8 @@ on:
 env:
   REPO_URL: https://github.com/sun9999-dev/SBE1V1K-OpenWrt.git
   REPO_BRANCH: main
+  TARGET_PROFILE: askey_sbe1v1k
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -58,14 +60,13 @@ jobs:
         run: |
           chmod +x ./gen_config.sh
           ./gen_config.sh
-
       - name: Compile firmware
         id: build_step
-        continue-on-error: true
+        # 调试阶段关闭continue-on-error，出错直接终止，不要生成残缺包
+        # continue-on-error: true
         run: |
           cd openwrt
           rm -rf bin
-
           if [[ "${{ github.event.inputs.build_type }}" == "config-only" ]]; then
             echo "仅生成配置，跳过编译"
             exit 0
@@ -73,13 +74,12 @@ jobs:
           if [[ "${{ github.event.inputs.build_type }}" == "initramfs-only" ]]; then
              make -j$(nproc) image PROFILE=${{ env.TARGET_PROFILE }} FILES= bin/initramfs
           else
-             make -j$(nproc) IGNORE_ERRORS="n m"
+             make -j$(nproc)
           fi
           
       - name: Tmate on build failure
         if: failure()
         uses: mxschmitt/action-tmate@v3        
-
       # 通配符自动匹配目录
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
