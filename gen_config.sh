@@ -1,12 +1,12 @@
 #!/bin/bash
-# gen_config.sh
 set -e
-
 cd openwrt
-> .config
+# 清空旧配置
+rm -f .config
+# 导入基础设备配置
 cat ../configs/sbe1v1k.config > .config
-make defconfig
 
+# 追加自定义内核模块配置
 cat >> .config <<EOF
 # ========== 【底层硬件驱动：必须=y，编译进内核，固件内置】 ==========
 CONFIG_PACKAGE_kmod-ath12k=y
@@ -21,12 +21,10 @@ CONFIG_PACKAGE_kmod-br-netfilter=y
 CONFIG_PACKAGE_kmod-ipt-core=y
 CONFIG_PACKAGE_kmod-nft-core=y
 CONFIG_PACKAGE_kmod-nft-offload=y
-
 # ========== 【应用类包】 ==========
 CONFIG_PACKAGE_strongswan-full=m
 CONFIG_PACKAGE_luci-nginx=y
 CONFIG_PACKAGE_nginx-ssl=y
-
 # ========== 【附加模块：可选功能，=m，刷机后apk安装】 ==========
 CONFIG_PACKAGE_kmod-ath=m
 CONFIG_PACKAGE_kmod-crypto-acompress=m
@@ -139,6 +137,10 @@ CONFIG_PACKAGE_kmod-zram=m
 CONFIG_PACKAGE_kmod-wireguard=m
 EOF
 
-# 删掉末尾多余的 make defconfig !!!
+# 关键：解析依赖，补全Kconfig
+make olddefconfig
+
+echo "===== Check critical drivers ====="
+grep -E "kmod-pcs-qcom-ipq9574|kmod-qcom-ppe|kmod-ath12k|kmod-phylink" .config
 echo "Total enabled kmod packages:"
 grep 'CONFIG_PACKAGE' .config | grep -E '=m|=y' | wc -l
