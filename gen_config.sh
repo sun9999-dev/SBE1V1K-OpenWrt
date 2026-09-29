@@ -137,8 +137,8 @@ CONFIG_PACKAGE_kmod-zram=m
 CONFIG_PACKAGE_kmod-wireguard=m
 EOF
 
-# 关键：解析依赖，补全Kconfig
-make olddefconfig
+# CI环境必须用defconfig，不要olddefconfig！
+make defconfig
 
 echo "===== Check critical drivers ====="
 grep -E "kmod-pcs-qcom-ipq9574|kmod-qcom-ppe|kmod-ath12k|kmod-phylink" .config
