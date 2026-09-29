@@ -54,7 +54,6 @@ jobs:
           cd openwrt
           ./scripts/feeds update -a
           rm -rf feeds/packages/net/nftables-nojson
-          ./scripts/feeds index
           ./scripts/feeds install -a
           # 直接删除tmp里对应的坏Kconfig行，干掉递归依赖
           sed -i '/PACKAGE_nftables-nojson/d' tmp/.config-package.in
